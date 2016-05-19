@@ -1,0 +1,62 @@
+Questão 1-
+NMI
+São interrupções urgentes que são priorizadas pelo microcontrolador, comumente associados a problemas de hardware, exemplo: é sinalizar um erro de paridade do subsistema de memória.
+ 
+ 
+IRQ
+ 
+o microcontrolador para tudo o que estiver fazendo para dar atenção ao periférico que está chamando, continuando seu trabalho após atendê-lo.
+ 
+Dois dispositivos não podem compartilhar a mesma interrupção, caso contrário, teremos um conflito de hardware.
+ 
+ 
+ 
+ 
+Questão 2.1
+ 
+IRQ Vs ISR
+ 
+ 
+ISR é o a rotina de tarefas associada a determinada interrupção IRQ.
+ 
+ 
+ 
+ 
+Questão 2.2
+ 
+Interrupções suportadas 240
+menor prioridade = menor numero
+ 
+ 
+ 
+Questao 2.3
+ 
+FIQ é interrupção de maior prioridade que IRQ.
+ 
+ 
+Questão 2.4
+ 
+IRQ
+ 
+ 
+questão 2.5
+PIOA - ID 11
+PIOb - ID 12
+TC0 - ID 23
+ 
+ 
+ 
+Questão 2.6
+O programa principal não saberá que a rotina associada á interrupção foi executada.
+ 
+ 
+Questão 2.7
+Interrupt Latency é o tempo decorrido (ciclos) da interrupção á execução da rotina associada à interrupção.
+ 
+ 
+ 
+Questão 2.8
+ARM 4 - 12 ciclos
+ 
+ 
+-----------

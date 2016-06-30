@@ -1,0 +1,128 @@
+-----------------------------------------
+
+1 - Periféricos
+Liste a funcionalidade dos periféricos listados a seguir :
+1. RTC - Real time clock / 
+
+Ultra Low Power Consumption
+? Full Asynchronous Design
+? Gregorian Calendar up to 2099 or Persian Calendar
+? Programmable Periodic Interrupt
+? Safety/security features:
+? Valid Time and Date Programmation Check
+? On-The-Fly Time and Date Validity Check
+? Crystal Oscillator Clock Calibration
+? Waveform Generation
+? Register Write Protection
+
+
+
+
+
+
+2. TC - Timer/Counter
+
+16 Bit Counter
+Clock selection
+Clock control
+Operation modes
+Trigger
+Capture mode
+Capture Registers A e B
+Trigger Conditions
+Waveform Mode
+Waveform Selection
+External Event\Trigger conditions
+Output Controller
+Quadrature Decoder
+Bit Gray Up-Down Counter for Step Motor
+Fault mode
+Register Write Protection
+
+-----------------------------------------
+Encontre os endereços referentes aos seguintes periféricos :
+1. PIOA 
+0x400E1000
+
+
+2. PIOB 
+0x400e1200
+
+3. ACC 
+0x4044000
+
+4. UART1 
+0x400e0740
+
+5. UART2
+0x400e0a00
+
+-----------------------------------------
+Verifique no datasheet do uC os pinos físicos do uC associados aos I/O: 
+
+PA01
+72-pino
+
+PB22 
+não encontrado
+
+PC12.
+23-pino
+
+-----------------------------------------
+Verifique quais periféricos podem ser configuráveis nos I/Os :
+1. PC20 
+A2, PWMH2
+
+2. PB3.
+UTXD1 PCK2
+
+
+-----------------------------------------
+• O que é deboucing ?
+Problema de classificação (interpretação errônea) de um nível 1 em um ciclo inferior ao período do clock, ocasionado por acionamento (input) externo
+
+• Descreva um algorítimo que implemente o deboucing.
+
+
+ if (input(PIN_B1)==0)   //Chave B1, teste
+       {
+     Contador = 0;
+     while (Contador < 2)
+         {
+          output_high(pin_c2);
+          delay_ms(15000);
+          output_low(pin_c2);
+          delay_ms(10000);
+          Contador ++;
+         }
+
+       }
+
+
+-----------------------------------------
+2.3 SET/Clear
+• O que é race condicions ?
+Ocorre quando há indesejável tentativa de um dispositivo ou sistema executar mais de uma operação ao mesmo tempo, quando o correto funcionamento exige sequência apropriada.
+
+• Como que essa forma de configurar os registradores evita isso?
+5
+Serialização da memória ou do acesso à memória.
+
+-----------------------------------------
+
+2.4 Configurando um pino em modo de output
+
+Explique com suas palavras o trecho anterior extraído do datasheet do uC,
+se possível referencie com o diagrama "I/O Line Control Logic".
+
+A linha I/O pode ser configurada para Periférico(A,BouC) ou Pio Controller(pino pode ser configurado para Driven). UmBit zero em PIO_OSR a correspondente I/O Linha é usada como Input.
+PIO_SODR Seta o registrador
+PIO_CODR Limpa o registrador
+Ambos gerenciam o PIO_ODSR
+
+
+PIO_ODSR e PIO_ODR Gerenciam PIO_OSR para escolher entre PIO Controller or associar a um periférico
+
+
+

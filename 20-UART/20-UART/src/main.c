@@ -35,34 +35,117 @@
 #define ID_LED_BLUE		ID_PIOA
 #define MASK_LED_BLUE	(1u << PIN_LED_BLUE)
 
+#define ID_LED_GREEN	ID_PIOA
+#define PORT_LED_GREEN	PIOA
+#define PIN_LED_GREEN	20
+#define MASK_LED_GREEN	(1u << PIN_LED_GREEN)
+
+#define ID_LED_RED		ID_PIOC
+#define PORT_LED_RED	PIOC
+#define PIN_LED_RED		20
+#define MASK_LED_RED	(1u << PIN_LED_RED)
+
 /************************************************************************/
 /* Variaveis                                                            */
 /************************************************************************/
 uint8_t g_str[11];
 uint8_t g_i = 0;
 
+uint8_t g_Period_red = 0;
+uint8_t g_Period_green = 0;
+uint8_t g_Period_blue = 0;
+
+uint8_t g_acumulador_red = 0;
+uint8_t g_acumulador_green = 0;
+uint8_t g_acumulador_blue = 0;
+
 /************************************************************************/
 /* Flags                                                                */
 /************************************************************************/
+uint8_t g_flag = 0;
+uint8_t g_flag_red = 0;
+uint8_t g_flag_blue = 0;
+uint8_t g_flag_green = 0;
 
 /************************************************************************/
 /* Handler                                                               */
 /************************************************************************/
 void UART0_Handler(void){
 	
-	g_str[g_i] = (UART0->UART_RHR) & (0xFF);
-	if(g_i>=10){
-		g_i=0;
-		g_str[10] = '\n';
+	if(g_i < 10){
+		g_str[g_i] = (UART0->UART_RHR) & (0xFF);
+		if(g_str[g_i] == '\n'){
+			g_str[g_i] = NULL;
+			g_i=0;
+			g_flag = 1;
+		}
+		else{
+			g_i++;
+		}
 	}
 	else{
-		g_i++;
-		g_str[g_i] = '\n';
+		g_str[10] = NULL;
+		g_i=0;
+		g_flag = -1;
 	}
+	
 }
 
+
+void TC0_Handler(void)
+{
+	volatile uint32_t ul_dummy;
+
+    /****************************************************************
+	* Devemos indicar ao TC que a interrupção foi satisfeita.
+    ******************************************************************/
+	ul_dummy = tc_get_status(TC0, 0);
+
+	/* Avoid compiler warning */
+	UNUSED(ul_dummy);
+
+	/** Muda o estado do LED */
+	if(g_flag_red == 1){
+		g_acumulador_red++;
+		if(g_acumulador_red >= g_Period_red){
+			/** Muda o estado do LED */
+			if(PIOC->PIO_ODSR & MASK_LED_RED)
+				pio_clear(PORT_LED_RED, (1 << PIN_LED_RED));
+			else
+				pio_set(PORT_LED_RED, (1 << PIN_LED_RED));
+			g_acumulador_red = 0;
+		}
+	}
+	
+	if(g_flag_green == 1){
+		g_acumulador_green++;
+		if(g_acumulador_green >= g_Period_green){
+			/** Muda o estado do LED */
+			if(PIOA->PIO_ODSR & MASK_LED_GREEN)
+			pio_clear(PORT_LED_GREEN, (1 << PIN_LED_GREEN));
+			else
+			pio_set(PORT_LED_GREEN, (1 << PIN_LED_GREEN));
+			g_acumulador_green = 0;
+		}
+	}
+	
+	if(g_flag_blue == 1){
+		g_acumulador_blue++;
+		if(g_acumulador_red >= g_Period_red){
+			/** Muda o estado do LED */
+			if(PIOA->PIO_ODSR & MASK_LED_BLUE)
+			pio_clear(PORT_LED_BLUE, (1 << PIN_LED_BLUE));
+			else
+			pio_set(PORT_LED_BLUE, (1 << PIN_LED_BLUE));
+			g_acumulador_blue = 0;
+		}
+	}
+
+}
+
+
 /************************************************************************/
-/* Configura UART                                                       */
+/* Configura Periferico                                                     */
 /************************************************************************/
 void config_uart(void){
 	
@@ -88,16 +171,35 @@ void config_uart(void){
 	UART0->UART_IER = (1u << RXRDY);
 }
 
+
+static void configure_tc(void)
+{
+	uint32_t ul_sysclk = sysclk_get_cpu_hz();
+	pmc_enable_periph_clk(ID_TC0);
+	tc_init(TC0, 0, TC_CMR_CPCTRG | TC_CMR_TCCLKS_TIMER_CLOCK5);
+    tc_write_rc(TC0, 0, 33);
+	tc_enable_interrupt(TC0, 0, TC_IER_CPCS);
+	NVIC_EnableIRQ(ID_TC0);
+    tc_start(TC0, 0);
+}
+
 /************************************************************************/
-/* Display Menu                                                         */
+/* Funcoes                                                      */
 /************************************************************************/
 static void display_menu(void)
 {
-	puts(" 1 : exibe novamente esse menu \n\r"
-		 " 2 : Ativa o LED  \n\r"
-		 " 3 : Desliga o LED \n\r ");
+	puts(" 1 : exibe novamente esse menu \n\r");
 }
 
+void ToGetPeriod(uint8_t str[], uint8_t *p)
+{
+	uint8_t i;
+	
+	for(i=0; i<=8; i++)
+		str[i] = str[i+2];
+		
+	*p = (uint8_t)(1000/atoi(str));
+}
 
 /************************************************************************/
 /* Main                                                                 */
@@ -105,7 +207,11 @@ static void display_menu(void)
 int main(void)
 {
 	uint8_t str[11];
-
+	
+	/* Initialize the global variables */
+	g_i = 0;
+	g_flag = 0;
+	
 	/* Initialize the system */
 	sysclk_init();
 	board_init();
@@ -113,7 +219,10 @@ int main(void)
 	/* Configure LED 1 */
 	pmc_enable_periph_clk(ID_LED_BLUE);
 	pio_set_output(PORT_LED_BLUE  , MASK_LED_BLUE	,1,0,0);
-
+	
+	/** Configura o timer */
+	configure_tc();
+	
 	/* Initialize debug console */
 	config_uart();
 		
@@ -126,23 +235,65 @@ int main(void)
 	display_menu();
 
 	while (1) {
-
-		//printf("Opcao nao definida: %s \n\r", str);
-		/*switch (uc_key) {
-			case '1':
-				display_menu();
-				break;
-			case '2':
-				pio_clear(PORT_LED_BLUE, MASK_LED_BLUE);
-				puts("Led ON \n\r");
-				break;
-			case '3':
-				pio_set(PORT_LED_BLUE, MASK_LED_BLUE);
-				puts("Led OFF \n\r");
-				break;
-			default:
-				printf("Opcao nao definida: %d \n\r", *uc_key);
-		}*/
+		
+		if(g_flag == 1){
+			printf("uC recebeu: %s \n", g_str);
+			g_flag = 0;
+			
+			switch(g_str[1]){
+				case 'r':{
+					if(g_str[0] == '0'){
+						g_flag_red = 0;
+					}
+					else if(g_str[0] == '1'){
+						g_flag_red = 1;
+						ToGetPeriod(g_str, &g_Period_red);
+					}
+					else{
+						printf("Operacao invalida\n");
+					}			
+					break;
+				}
+				case 'g':{
+					if(g_str[0] == '0'){
+						g_flag_red = 0;
+					}
+					else if(g_str[0] == '1'){
+						g_flag_red = 1;
+						ToGetPeriod(g_str, &g_Period_green);
+					}
+					else{
+						printf("Operacao invalida\n");
+					}
+					break;
+				}
+				case 'b':{
+					if(g_str[0] == '0'){
+						g_flag_red = 0;
+					}
+					else if(g_str[0] == '1'){
+						g_flag_red = 1;
+						ToGetPeriod(g_str, &g_Period_blue);
+					}
+					else{
+						printf("Operacao invalida\n");
+					}
+					break;
+				}
+				default:{
+					printf("Opcao de led invalido\n");
+					break;
+				}
+			}
+			g_flag == 0;
+		}
+		else if(g_flag == -1){
+			printf("uC recebeu dados invalidos:  %s \n", g_str);
+			g_flag = 0;	
+		}
+		else{
+			
+		}
 	}
 }
 

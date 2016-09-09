@@ -48,24 +48,24 @@
 /************************************************************************/
 /* Variaveis                                                            */
 /************************************************************************/
-uint8_t g_str[11];
-uint8_t g_i = 0;
+char g_str[11];
+uint32_t g_i = 0;
 
-uint8_t g_Period_red = 0;
-uint8_t g_Period_green = 0;
-uint8_t g_Period_blue = 0;
+uint32_t g_Period_red = 0;
+uint32_t g_Period_green = 0;
+uint32_t g_Period_blue = 0;
 
-uint8_t g_acumulador_red = 0;
-uint8_t g_acumulador_green = 0;
-uint8_t g_acumulador_blue = 0;
+uint32_t g_acumulador_red = 0;
+uint32_t g_acumulador_green = 0;
+uint32_t g_acumulador_blue = 0;
 
 /************************************************************************/
 /* Flags                                                                */
 /************************************************************************/
-uint8_t g_flag = 0;
-uint8_t g_flag_red = 0;
-uint8_t g_flag_blue = 0;
-uint8_t g_flag_green = 0;
+uint32_t g_flag = 0;
+uint32_t g_flag_red = 0;
+uint32_t g_flag_blue = 0;
+uint32_t g_flag_green = 0;
 
 /************************************************************************/
 /* Handler                                                               */
@@ -110,10 +110,9 @@ void TC0_Handler(void)
 		if(g_acumulador_red >= g_Period_red){
 			/** Muda o estado do LED */
 			if(PIOC->PIO_ODSR & MASK_LED_RED)
-				pio_set(PORT_LED_RED, (1 << PIN_LED_RED));
-			else
 				pio_clear(PORT_LED_RED, (1 << PIN_LED_RED));
-
+			else
+				pio_set(PORT_LED_RED, (1 << PIN_LED_RED));
 			g_acumulador_red = 0;
 		}
 	}
@@ -123,21 +122,21 @@ void TC0_Handler(void)
 		if(g_acumulador_green >= g_Period_green){
 			/** Muda o estado do LED */
 			if(PIOA->PIO_ODSR & MASK_LED_GREEN)
-			pio_clear(PORT_LED_GREEN, (1 << PIN_LED_GREEN));
+				pio_clear(PORT_LED_GREEN, (1 << PIN_LED_GREEN));
 			else
-			pio_set(PORT_LED_GREEN, (1 << PIN_LED_GREEN));
+				pio_set(PORT_LED_GREEN, (1 << PIN_LED_GREEN));
 			g_acumulador_green = 0;
 		}
 	}
 	
 	if(g_flag_blue == 1){
 		g_acumulador_blue++;
-		if(g_acumulador_red >= g_Period_red){
+		if(g_acumulador_blue >= g_Period_blue){
 			/** Muda o estado do LED */
 			if(PIOA->PIO_ODSR & MASK_LED_BLUE)
-			pio_clear(PORT_LED_BLUE, (1 << PIN_LED_BLUE));
+				pio_clear(PORT_LED_BLUE, (1 << PIN_LED_BLUE));
 			else
-			pio_set(PORT_LED_BLUE, (1 << PIN_LED_BLUE));
+				pio_set(PORT_LED_BLUE, (1 << PIN_LED_BLUE));
 			g_acumulador_blue = 0;
 		}
 	}
@@ -172,7 +171,6 @@ void config_uart(void){
 	UART0->UART_IER = (1u << RXRDY);
 }
 
-
 static void configure_tc(void)
 {
 	uint32_t ul_sysclk = sysclk_get_cpu_hz();
@@ -184,6 +182,20 @@ static void configure_tc(void)
     tc_start(TC0, 0);
 }
 
+/**
+ *  \brief Configure the LEDs
+ *
+ */
+static void configure_leds(void)
+{
+	pmc_enable_periph_clk(ID_LED_GREEN);
+	pio_set_output(PORT_LED_GREEN , MASK_LED_GREEN  ,1,0,0);
+	pmc_enable_periph_clk(ID_LED_BLUE);
+	pio_set_output(PORT_LED_BLUE , MASK_LED_BLUE  ,1,0,0);
+	pmc_enable_periph_clk(ID_LED_RED);
+	pio_set_output(PORT_LED_RED , MASK_LED_RED ,1,0,0);
+}
+
 /************************************************************************/
 /* Funcoes                                                      */
 /************************************************************************/
@@ -192,23 +204,25 @@ static void display_menu(void)
 	puts(" 1 : exibe novamente esse menu \n\r");
 }
 
-void ToGetPeriod(uint8_t str[], uint8_t *p)
+void ToGetPeriod(char str[], uint32_t *p)
 {
-	uint8_t i;
+	uint32_t i;
 	
 	for(i=0; i<=8; i++)
 		str[i] = str[i+2];
 		
-	*p = (uint8_t)(1000/atoi(str));
-	printf("uC recebeu: %i \n", *p);
+	*p = (uint32_t)(1000/atoi(str));
+	printf("uC freuqencia lida: %i \n", *p);
+	printf("frequencia digitada: %i \n", atoi(str));
 }
+
 
 /************************************************************************/
 /* Main                                                                 */
 /************************************************************************/
 int main(void)
 {
-	uint8_t str[11];
+	uint32_t str[11];
 	
 	/* Initialize the global variables */
 	g_i = 0;
@@ -219,11 +233,8 @@ int main(void)
 	board_init();
 
 	/* Configure LED 1 */
-	pmc_enable_periph_clk(ID_LED_BLUE);
-	pmc_enable_periph_clk(ID_LED_RED);
+	configure_leds();
 
-	pio_set_output(PORT_LED_BLUE  , MASK_LED_BLUE	,1,0,0);
-	
 	/** Configura o timer */
 	configure_tc();
 	
@@ -248,11 +259,12 @@ int main(void)
 				case 'r':{
 					if(g_str[0] == '0'){
 						g_flag_red = 0;
+						pio_clear(PORT_LED_RED, MASK_LED_RED);
 					}
 					else if(g_str[0] == '1'){
 						g_flag_red = 1;
 						ToGetPeriod(g_str, &g_Period_red);
-						printf("ok!\n");
+						printf("Periodo: %i\n", g_Period_red);
 					}
 					else{
 						printf("Operacao invalida\n");
@@ -262,6 +274,8 @@ int main(void)
 				case 'g':{
 					if(g_str[0] == '0'){
 						g_flag_green = 0;
+						pio_set(PORT_LED_GREEN, MASK_LED_GREEN);
+
 					}
 					else if(g_str[0] == '1'){
 						g_flag_green = 1;
@@ -275,6 +289,7 @@ int main(void)
 				case 'b':{
 					if(g_str[0] == '0'){
 						g_flag_blue = 0;
+						pio_set(PORT_LED_BLUE, MASK_LED_BLUE);
 					}
 					else if(g_str[0] == '1'){
 						g_flag_blue = 1;
@@ -290,7 +305,6 @@ int main(void)
 					break;
 				}
 			}
-			g_flag == 0;
 		}
 		else if(g_flag == -1){
 			printf("uC recebeu dados invalidos:  %s \n", g_str);
